@@ -110,6 +110,22 @@ server <- function(input, output) {
 		}, message = "Loading historical results...", value = 0)
 	})
 	
+	# Marathonbet odds
+	odds <- reactive({
+		withProgress({
+			"/home/cervus/sumo-odds/odds" %>% 
+				list.files(pattern = "\\.csv", full.names = TRUE) %>% 
+				tail(1) %>% 
+				read_csv() %>% 
+				group_by(rikishi1, rikishi2) %>% 
+				summarise(
+					odds1 =  round(last(odds1, order_by = ts), 2),
+					odds2 = round(last(odds2, order_by = ts), 2)
+				) %>% 
+				ungroup()
+		}, message = "Loading odds...", value = .5)
+	})
+	
 	# HEADER: first wrestler's name
 	output$shikona1 = renderText({
 		req(input$banzuke_rows_selected, results)
@@ -129,21 +145,38 @@ server <- function(input, output) {
 	
 	# TABLE: first wrestler's performance
 	output$rikishi1 = renderTable({
-		req(banzuke, results, input$banzuke_rows_selected[1])
+		req(banzuke, results, odds, input$banzuke_rows_selected[1])
 		
 		results() %>% 
 			filter(
 				basho == max(banzuke()$basho),
 				rikishi1_shikona == banzuke_to_show()$rikishi[input$banzuke_rows_selected[1]]
 			) %>% 
+			left_join(
+				odds() %>% 
+					transmute(
+						rikishi1_shikona = rikishi1,
+						rikishi2_shikona = rikishi2,
+						odds1
+					)
+			) %>%
+			left_join(
+				odds() %>% 
+					transmute(
+						rikishi1_shikona = rikishi2,
+						rikishi2_shikona = rikishi1,
+						odds2
+					)
+			) %>% 
 			transmute(
 				day,
+				odds = coalesce(odds1, odds2),
 				win = recode(rikishi1_win + 1, " ", "x"),
 				kimarite,
 				opponent = rikishi2_shikona,
 				rank = rikishi2_rank
 			)
-	})
+	}, digits = 2, na = "")
 	
 	# HEADER: second wrestler's name
 	output$shikona2 = renderText({
@@ -164,21 +197,38 @@ server <- function(input, output) {
 	
 	# TABLE: second wrestler's performance
 	output$rikishi2 = renderTable({
-		req(banzuke, results, input$banzuke_rows_selected)
+		req(banzuke, results, odds, input$banzuke_rows_selected[2])
 		
 		results() %>% 
 			filter(
 				basho == max(banzuke()$basho),
 				rikishi1_shikona == banzuke_to_show()$rikishi[input$banzuke_rows_selected[2]]
 			) %>% 
+			left_join(
+				odds() %>% 
+					transmute(
+						rikishi1_shikona = rikishi1,
+						rikishi2_shikona = rikishi2,
+						odds1
+					)
+			) %>%
+			left_join(
+				odds() %>% 
+					transmute(
+						rikishi1_shikona = rikishi2,
+						rikishi2_shikona = rikishi1,
+						odds2
+					)
+			) %>% 
 			transmute(
 				day,
+				odds = coalesce(odds1, odds2),
 				win = recode(rikishi1_win + 1, " ", "x"),
 				kimarite,
 				opponent = rikishi2_shikona,
 				rank = rikishi2_rank
 			)
-	})
+	}, digits = 2, na = "")
 	
 	# HEADER: first vs second
 	output$vs = renderText({
@@ -219,7 +269,7 @@ server <- function(input, output) {
 			) %>% 
 			arrange(-as.numeric(basho), -day) %>% 
 			set_names(sub("rikishi[12]_", "", names(.)))
-	})
+	}, na = "")
 	
 	# in case something needs to be checked
 	output$debug = renderPrint({
