@@ -113,16 +113,8 @@ server <- function(input, output) {
 	# Marathonbet odds
 	odds <- reactive({
 		withProgress({
-			"/home/cervus/sumo-odds/odds" %>% 
-				list.files(pattern = "\\.csv", full.names = TRUE) %>% 
-				tail(1) %>% 
-				read_csv() %>% 
-				group_by(rikishi1, rikishi2) %>% 
-				summarise(
-					odds1 =  round(last(odds1, order_by = ts), 2),
-					odds2 = round(last(odds2, order_by = ts), 2)
-				) %>% 
-				ungroup()
+			"/home/cervus/sumo-misc-scripts/odds/marathonbet-now.csv" %>% 
+				read_csv()
 		}, message = "Loading odds...", value = .5)
 	})
 	
@@ -171,7 +163,7 @@ server <- function(input, output) {
 			transmute(
 				day,
 				odds = coalesce(odds1, odds2),
-				win = recode(rikishi1_win + 1, " ", "x"),
+				win = recode(rikishi1_win, `0` = " ", `1` = "x", .missing = "?"),
 				kimarite,
 				opponent = rikishi2_shikona,
 				rank = rikishi2_rank
@@ -223,7 +215,7 @@ server <- function(input, output) {
 			transmute(
 				day,
 				odds = coalesce(odds1, odds2),
-				win = recode(rikishi1_win + 1, " ", "x"),
+				win = recode(rikishi1_win, `0` = " ", `1` = "x", .missing = "?"),
 				kimarite,
 				opponent = rikishi2_shikona,
 				rank = rikishi2_rank
@@ -260,9 +252,9 @@ server <- function(input, output) {
 				rikishi1_rank,
 				rikishi1_shikona,
 				rikishi1_result,
-				rikishi1_win = recode(rikishi1_win + 1, " ", "x"),
+				rikishi1_win = recode(rikishi1_win, `0` = " ", `1` = "x", .missing = "?"),
 				kimarite,
-				rikishi2_win = recode(rikishi2_win + 1, " ", "x"),
+				rikishi2_win = recode(rikishi2_win, `0` = " ", `1` = "x", .missing = "?"),
 				rikishi2_rank,
 				rikishi2_shikona,
 				rikishi2_result
