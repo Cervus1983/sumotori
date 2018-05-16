@@ -113,8 +113,16 @@ server <- function(input, output) {
 	# Marathonbet odds
 	odds <- reactive({
 		withProgress({
-			"/home/cervus/sumo-misc-scripts/odds/marathonbet-now.csv" %>% 
-				read_csv()
+			"/home/cervus/sumo-misc-scripts/odds" %>% 
+				list.files(pattern = "marathonbet_\\d{6}\\.csv", full.names = TRUE) %>% 
+				tail(1) %>% 
+				read_csv() %>% 
+				group_by(rikishi1, rikishi2) %>% 
+				summarise(
+					odds1 =  round(last(odds1, order_by = ts), 2),
+					odds2 = round(last(odds2, order_by = ts), 2)
+				) %>% 
+				ungroup()
 		}, message = "Loading odds...", value = .5)
 	})
 	
